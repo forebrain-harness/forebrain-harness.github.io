@@ -1,0 +1,138 @@
+:root {
+  --vp-c-brand-1: #0d91b0;
+  --vp-c-brand-2: #19b7d2;
+  --vp-c-brand-3: #6ce6e8;
+  --vp-c-brand-soft: rgba(25, 183, 210, 0.18);
+  --vp-c-bg: #eaf4f5;
+  --vp-c-bg-alt: #dfeff2;
+  --vp-c-bg-elv: #f7fcfc;
+  --vp-c-divider: rgba(20, 74, 94, 0.16);
+  --vp-c-text-1: #102531;
+  --vp-c-text-2: #3d6170;
+  --vp-font-family-base: "Source Serif 4", "Iowan Old Style", "Palatino Linotype", serif;
+  --vp-font-family-mono: "IBM Plex Mono", "SFMono-Regular", monospace;
+  --vp-button-brand-bg: #0d91b0;
+  --vp-button-brand-hover-bg: #0f7f9a;
+  --vp-button-brand-text: #f5ffff;
+  --vp-button-alt-bg: rgba(10, 54, 74, 0.08);
+  --vp-button-alt-hover-bg: rgba(10, 54, 74, 0.14);
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(120deg, #045c79 0%, #13a9cb 42%, #9df5ee 100%);
+  --vp-home-hero-image-background-image:
+    radial-gradient(circle at 18% 18%, rgba(104, 246, 255, 0.34), transparent 28%),
+    radial-gradient(circle at 78% 18%, rgba(102, 204, 255, 0.26), transparent 30%),
+    radial-gradient(circle at 50% 78%, rgba(43, 123, 163, 0.24), transparent 34%),
+    linear-gradient(145deg, rgba(4, 25, 40, 0.98), rgba(7, 42, 62, 0.96) 58%, rgba(3, 16, 28, 0.98));
+  --vp-home-hero-image-filter: blur(56px);
+}
+
+.dark {
+  --vp-c-bg: #04111b;
+  --vp-c-bg-alt: #081a26;
+  --vp-c-bg-elv: #0a1f2d;
+  --vp-c-divider: rgba(195, 241, 255, 0.12);
+  --vp-c-text-1: #ebfeff;
+  --vp-c-text-2: #9fc6d4;
+  --vp-button-alt-bg: rgba(128, 236, 255, 0.08);
+  --vp-button-alt-hover-bg: rgba(128, 236, 255, 0.14);
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, rgba(108, 230, 232, 0.18), transparent 20%),
+    radial-gradient(circle at 80% 12%, rgba(69, 165, 214, 0.14), transparent 18%),
+    radial-gradient(circle at bottom right, rgba(11, 85, 117, 0.12), transparent 22%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0)),
+    var(--vp-c-bg);
+}
+
+.VPNavBar {
+  background: rgba(234, 244, 245, 0.78) !important;
+  border-bottom: 1px solid var(--vp-c-divider);
+  backdrop-filter: blur(16px);
+}
+
+.dark .VPNavBar {
+  background: rgba(4, 17, 27, 0.78) !important;
+}
+
+.VPFeature {
+  border: 1px solid var(--vp-c-divider);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(240, 249, 250, 0.54)),
+    var(--vp-c-bg-elv);
+  box-shadow: 0 18px 40px rgba(9, 52, 74, 0.08);
+}
+
+.dark .VPFeature {
+  background:
+    linear-gradient(180deg, rgba(14, 41, 57, 0.78), rgba(10, 31, 45, 0.62)),
+    var(--vp-c-bg-elv);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.24);
+}
+
+.vp-doc h1,
+.vp-doc h2,
+.vp-doc h3,
+.VPHomeHero .name,
+.VPHomeHero .text {
+  letter-spacing: -0.02em;
+}
+
+.vp-doc .custom-block {
+  border-radius: 14px;
+}
+
+.vp-doc .custom-block.tip {
+  border-color: rgba(13, 145, 176, 0.24);
+  background: rgba(240, 251, 252, 0.92);
+}
+
+.dark .vp-doc .custom-block.tip {
+  background: rgba(7, 36, 50, 0.78);
+}
+
+.vp-doc table {
+  display: table;
+  width: 100%;
+}
+
+.vp-doc pre {
+  border: 1px solid var(--vp-c-divider);
+}
+
+.VPHomeHero .image {
+  filter: drop-shadow(0 22px 40px rgba(6, 78, 104, 0.22));
+}
+
+.VPHomeHero .tagline {
+  max-width: 40rem;
+}
+
+.vp-doc a,
+.VPLink.link {
+  text-underline-offset: 0.14em;
+}
+
+.vp-doc div.language-mermaid {
+  overflow-x: auto;
+  border: 1px solid var(--vp-c-divider);
+  background: var(--vp-c-bg-elv);
+  padding: 18px;
+}
+
+.language-mermaid > pre,
+.language-mermaid .copy,
+.language-mermaid .lang {
+  display: none !important;
+}
+
+.language-mermaid .mermaid-render {
+  overflow-x: auto;
+}
+
+.language-mermaid .mermaid-render svg {
+  display: block;
+  min-width: 640px;
+  margin: 0 auto;
+}
