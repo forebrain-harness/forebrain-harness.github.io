@@ -20,12 +20,37 @@ For a new user, the main goal is to reach a valid interactive session first.
 After that, the rest of the guide explains the core runtime surfaces and
 features.
 
+## Install
+
+Install with npm (Node.js 18+; macOS arm64/x64, Linux x64/arm64, Windows x64):
+
+```bash
+npm install -g @forebrain-harness/forebrain
+```
+
+Or with Go (Go 1.26+ and a C compiler):
+
+```bash
+CGO_ENABLED=1 go install -tags fts5 github.com/forebrain-harness/forebrain-harness/cmd/forebrain@latest
+```
+
+A `go install` build downloads the tokenization dictionaries used for Chinese
+and Japanese memory search automatically the first time they are needed, and
+works offline afterwards. Prebuilt archives for every platform are attached to
+each [GitHub release](https://github.com/forebrain-harness/forebrain-harness/releases).
+
+Verify the installation:
+
+```bash
+forebrain --version
+```
+
 ## What You Need
 
 Before starting Forebrain Harness, make sure you have:
 
 - a local terminal session
-- a Forebrain Harness installation
+- a [Forebrain Harness installation](#install)
 - valid model-provider credentials for the main agent
 - a workspace you are willing to trust for file access and tool execution
 
