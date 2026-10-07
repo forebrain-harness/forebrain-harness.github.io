@@ -82,7 +82,7 @@ Use the following split when editing the config.
   Covers sandbox execution policy, filesystem and network restrictions, and
   dangerous fallback controls.
 - [Memory, Compaction, And Runtime Features](/config/memory-and-runtime-features)
-  Covers Active Memory, Core Memory, dreaming flags, compaction, and
+  Covers memory generation, retrieval, and pipeline tuning, compaction, and
   personality selection.
 - [Hooks And Skill Extensions](/config/hooks-and-skill-extensions)
   Covers lifecycle hooks and skill-specific extension configuration.

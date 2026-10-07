@@ -193,10 +193,9 @@ feature.
 It includes:
 
 - retrieval-oriented search memory
-- Active Memory recall
+- durable per-project and global memory
 - transcript continuity distillation
 - governance and consolidation paths
-- documented dreaming state
 
 Each part exists because “memory” in agent systems actually means several
 different problems.

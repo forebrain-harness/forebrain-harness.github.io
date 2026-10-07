@@ -18,7 +18,7 @@ flowchart TB
         SD --> SYS["$FOREBRAIN_HOME/skills/.system/"]
     end
     subgraph 发现
-        R["AgentSkillRootsForWorkspace"] --> C["mergedSkillParser.collect"]
+        R["AgentSkillRoots"] --> C["mergedSkillParser.collect"]
         C --> L["Loader.Discover"]
     end
     subgraph 暴露
@@ -57,7 +57,7 @@ frontmatter 支持的字段（`pkg/skill/skill.go:45-60`）：
 
 ## 加载路径与优先级
 
-路径解析的唯一入口是 `skill.AgentSkillRootsForWorkspace(home, workspaceRoot)`（`pkg/skill/roots.go:58-79`），被 `pkg/run/runner.go:789` 与 `:1040` 调用。它按优先级从高到低返回以下根目录：
+路径解析的唯一入口是层级表 `skillLayers(home, workspaceRoot, projectRoots)`（`pkg/skill/origin.go:77-97`），经 `skill.AgentSkillRoots(home, workspaceRoot, launch)` 在 `pkg/run/runner.go:966` 被消费。它按优先级从高到低返回以下根目录：
 
 | 优先级 | 路径 | 说明 |
 |--------|------|------|
@@ -67,14 +67,14 @@ frontmatter 支持的字段（`pkg/skill/skill.go:45-60`）：
 | 4 | `~/.agents/skills`、`~/.claude/skills`、`~/.codex/skills` | 跨工具的用户级技能目录 |
 | 5 | `$FOREBRAIN_HOME/skills/.system` | 内嵌的系统技能，最低优先级 |
 
-`AgentSkillRoots(home)` 是 `AgentSkillRootsForWorkspace(home, <home>/workspace)` 的便捷封装。
+实践中：项目技能与所有在这个 checkout 上工作的人共享，home 与用户级技能跨项目私有；`.system` 是优先级 5 的独立根，从共享根之下到达，所以用户安装的技能永远压过同名内置技能。
 
 ### 项目技能目录的信任门禁
 
-优先级最高的项目目录不是无条件加载的（`pkg/skill/roots.go:100-118`）。要进入模型提示，必须同时满足：
+优先级最高的项目目录不是无条件加载的（`pkg/skill/roots.go:46-60`）。要进入模型提示，必须同时满足：
 
-1. 当前进程目录位于版本控制项目内——`safety.Resolve(cwd)` 发现 `.git` 目录或 worktree 式 `.git` 文件，返回 `VersionControlled=true`（`pkg/safety/engine.go:930-958`）；
-2. 该项目存在已持久化的「可信」决策——`safety.IsTrusted(home, project)` 返回 `true`。未判定或显式拒绝都视为不可信，fail-closed（`pkg/safety/engine.go:965-971`）。
+1. **启动信任提示为该目录给出了肯定回答。** 信任提示就是全部门禁，它对每个目录都会运行——无论是否受版本控制——受信任的普通目录与受信任的 checkout 得到同样的项目技能（`pkg/skill/roots.go:46-51`）；
+2. **存在已持久化的「可信」决定。** `safety.IsTrusted` 读取规范化项目根的精确持久决定；状态缺失即不可信，状态损坏返回错误，调用方一律 fail-closed（`pkg/safety/engine.go:993-996`、`pkg/skill/roots.go:103-106`）。
 
 这是防御性设计：项目目录里随 checkout 一起到达的 skill 本质是指令、常常还带脚本，只有用户明确信任该项目，它们才会被描述给模型。
 
@@ -82,59 +82,60 @@ frontmatter 支持的字段（`pkg/skill/skill.go:45-60`）：
 
 同名 skill 由更高优先级的根遮蔽低优先级副本：扫描时先到先得，命中过的目录名或 skill 名不再重复收录（见下文发现规则）。
 
-> 管理视图（`pkg/skill/hub.go` 的 `Hub`）使用相同的根顺序，但项目目录**不经过信任门禁**。那是给人做 list / inspect / toggle 用的；能否进入模型提示仍由 `TrustedProjectSkillRoots` 决定。
+> 管理视图（`pkg/skill/hub.go` 的 `Hub`）使用相同的层顺序，但项目目录经 `ProjectSkillRootsForDir` **不经过信任门禁**（`pkg/skill/hub.go:31-36`）。那是给人做 list / inspect / toggle 用的；能否进入模型提示仍由 `TrustedProjectSkillRoots` 决定。
 
 ## 发现与解析
 
-`skill.Loader{ Roots, StateRoot }.Discover()`（`pkg/skill/skillrt.go:63-87`）通过 `mergedSkillParser.collect()` 遍历各根目录：
+`skill.Loader{ Roots, StateRoot }.Discover()`（`pkg/skill/skillrt.go:91-134`）通过 `mergedSkillParser.collect()` 遍历各根目录，底层是共享扫描器 `scanSkillRoots`（`pkg/skill/discover.go:51-61`）：
 
-1. 遍历每个根的直接子目录。**depth 0 时**若子目录内没有 `SKILL.md`，会再递归一层（depth+1），用于支持 `.system/caveman/*` 这类命名空间容器；更深的层级不再递归（`skillrt.go:137-161`）。
-2. 跳过以 `.` 开头的隐藏目录，唯独放行 `.system`。
-3. `SKILL.md` 读不到、为空或解析失败 → 跳过；`description` 为空 → 跳过（无描述的 skill 不会出现在目录中）。
-4. 按规范化路径（`CanonicalSkillPath`：绝对路径 + 符号链接解析，`roots.go:199-225`）过滤被禁用的 skill。禁用状态存于 `<workspaceRoot>/state/skills/disabled.json`（`pkg/skill/state.go:41-43`）。
-5. 去重：`seenDirs`（按相对路径，大小写不敏感）与 `seenNames`（按 skill 名，大小写不敏感）保证先扫描的根胜出，即高优先级遮蔽低优先级。
-6. 排序：按 skill 名小写排序；`CatalogEntries` 再以路径做 tie-break，保证同一 skill 集合每次渲染字节一致（`pkg/skill/catalog.go:94-120`）。
+1. 只有目录算数，**以 `.` 开头的目录一律不深入**；内置技能所在的 `.system` 不靠扫描放行，而是作为优先级 5 的独立根挂载。没有可解析 `SKILL.md` 的目录是 bundle，**恰好向下递归一层**（`maxSkillNestingDepth = 1`，`pkg/skill/discover.go:63-89`）。
+2. `SKILL.md` 读不到、为空或解析失败 → 跳过。
+3. `description` 为空 → 整个跳过（描述是 skill 抵达模型的全部方式，无描述的 skill 永远无法被选中，`pkg/skill/discover.go:96-98`）。
+4. 按规范化路径过滤被禁用的 skill，对照存于 `<workspaceRoot>/state/skills/disabled.json` 的开关库（`pkg/skill/skillrt.go:97-104`、`pkg/skill/state.go:45`）。
+5. 去重：`seenDirs`（按小写相对路径）与 `seenNames`（按小写 skill 名）保证先扫描的根胜出，即高优先级遮蔽低优先级（`pkg/skill/skillrt.go:105-120`）。
+6. 排序：按小写 skill 名排序，`CatalogEntries` 再以路径做稳定 tie-break，保证同一 skill 集合每次渲染字节一致（`pkg/skill/skillrt.go:130-132`、`pkg/skill/catalog.go:139-145`）。
 
 ## 如何暴露给 LLM
 
 ### 主机制：会话前缀注入 + progressive disclosure
 
-在 `pkg/run/runner.go:789`，LLM 客户端被包装：
+在 `pkg/run/runner.go:966-970`，LLM 客户端被包装：
 
 ```go
-llmClient = wrapSkillCatalogLLM(llmClient,
-    skill.AgentSkillRootsForWorkspace(r.Home, r.workspaceRoot()),
-    r.workspaceRoot())
+skillRoots := skill.AgentSkillRoots(r.Home, r.workspaceRoot(), r.LaunchProject)
+...
+llmClient = wrapSkillCatalogLLM(llmClient, skillRoots, r.workspaceRoot(),
+    r.SessionStore, r.skillOfferGuidance)
 ```
 
-`skillCatalogLLM`（`pkg/run/skills.go:19-94`）在每次 `Execute` 前：
+`skillCatalogLLM`（`pkg/run/skills.go:97-120`）在每次 `Execute` 前：
 
-- 调用 `catalogForSession(sessionID)` 渲染目录，**每个会话只渲染一次**，之后逐字节复用缓存（`bySession` map + mutex）；
-- 把渲染结果经 `memory.InjectDeveloperInstruction(messages, catalog)` 注入为一条 `role=developer`、`IsMeta=true` 的消息；若已存在 `system` 消息则插到 system 之后，否则置于消息序列最前（`pkg/memory/instruction.go:334-346`）。
+- 调用 `catalogForSession(sessionID)` 渲染目录，**每个会话只渲染一次**，之后逐字节复用缓存；
+- 把渲染结果经 `memory.InjectDeveloperInstruction` 注入为一条 `role=developer`、`IsMeta=true` 的消息；若已存在 `system` 消息则插到 system 之后，否则置于消息序列最前（`pkg/memory/instruction.go:351-357`）。
 
-目录内容由 `RenderCatalog` 生成（`pkg/skill/catalog.go:49-76`），结构为：
+目录内容由 `RenderCatalog` 生成（`pkg/skill/catalog.go:56-83`），结构为：
 
 - `## Skills` + 一段说明；
-- `### Available skills`：每行 `- name: description (path)`，其中 `path` 指向该 skill 的 `SKILL.md` 绝对路径；
-- `### How to use skills`：一段 progressive disclosure 协议，要求模型先判断 skill 是否适用，然后**自己用文件工具完整读取对应 `SKILL.md`**，相对路径相对 `SKILL.md` 所在目录解析，`scripts/`、`assets/`、`references/` 按需读取，且 skill 不跨轮次携带。
+- `### How to use skills`：一段 progressive disclosure 协议，要求模型先根据描述判断 skill 是否适用，然后**自己用文件工具完整读取对应 `SKILL.md`**，相对路径相对 `SKILL.md` 所在目录解析，`scripts/`、`assets/`、`references/` 按需读取，且 skill 不跨轮次携带；
+- `### Available skills`：每行 `- name: description (path)`，其中 `path` 指向该 skill 的 `SKILL.md` 绝对路径。每个字段先被压平成单行（`catalogField`），frontmatter 或目录名里埋换行无法伪造第二条目录条目（`pkg/skill/catalog.go:85-102`）。
 
 关键点：**catalog 只包含「名称 + 描述 + 路径」，skill 正文不进 prompt**，由模型按需读盘。这使工具数组在整个会话生命周期内保持固定。
 
 ### 为什么按会话冻结
 
-catalog 位于整段对话之前。provider 只有在这些字节逐字节不变时才命中前缀缓存；若每轮都重读 skill 目录，会话中途新增、重命名或开关某个 skill 就会改变前缀，使 system prompt、工具定义和之前所有轮次的缓存全部失效。因此 skill 集合的变更在**下一个会话**才生效（`pkg/run/skills.go:61-69`）。
+catalog 位于整段对话之前。provider 只有在这些字节逐字节不变时才命中前缀缓存；若每轮都重读 skill 目录，会话中途新增、重命名或开关某个 skill 就会改变前缀，使 system prompt、工具定义和之前所有轮次的缓存全部失效。因此 skill 集合的变更在**下一个会话**才生效（`pkg/skill/catalog.go:41-53`、`pkg/run/skills.go:50`）。
 
 ### 显式斜杠命令激活
 
-除非 `SKILL.md` 声明 `slash-command: false`，每个 skill 都会被 `turn.RefreshSkills` 派生为一条斜杠命令（`pkg/turn/skills.go`）。显式调用时走 `skill.LoadActivation`，渲染完整的 `<skill>` 块（含正文，并附 `<context>` 资源清单：根目录、只读标记、相对路径解析说明、目录与文件列表），再经 `WithExplicitSkillActivation` / `explicitSkillActivationMessage` 作为 ephemeral 的 user meta 消息内联注入。此时模型无需再自己去读 `SKILL.md`（`pkg/run/skills.go:96-151`、`pkg/skill/activation.go`）。
+除非 `SKILL.md` 声明 `slash-command: false`，每个 skill 都会被派生为一条斜杠命令（`pkg/turn/skills.go`）。显式调用时走 `skill.LoadActivation`，渲染完整的 `<skill>` 块（含正文，并附 `<context>` 元素承载资源清单，即原始文档，与 Codex 的形状一致，`pkg/skill/activation.go:108-113`），再经 `WithExplicitSkillActivation` 作为 ephemeral 的 user meta 消息内联注入（`pkg/run/skills.go:287-292,441-457`）。此时模型无需再自己去读 `SKILL.md`。
 
 ### 资源访问控制
 
-同一份发现结果还会喂给运行时工具状态（`pkg/run/runner.go:1040-1065`）：
+同一份发现结果还会喂给运行时工具状态（`pkg/run/runner.go:1212-1230`）：
 
 ```go
 discoveredSkills, skillErr := (skill.Loader{
-    Roots:     roots,
+    Roots:     skillRoots,
     StateRoot: r.workspaceRoot(),
 }).Discover()
 ...
@@ -143,9 +144,9 @@ r.tools.ReplaceLoadedSkillCatalog(loadedSkills)
 
 `pkg/tool/loaded_skills.go` 中的 loaded-skill catalog 是「skill 资源访问的唯一事实来源」：
 
-- 允许文件 / Shell 工具读取 skill 根目录，即使它不在普通 allowed roots 内；
-- **硬阻断对 skill 根的写入**（skill 只读，`ErrLoadedSkillWriteBlocked`）；
-- 阻断对 skill 根的非只读 Shell 访问（`ErrLoadedSkillShellAccessBlocked`）。
+- 允许文件 / Shell 工具**读取** skill 根目录，即使它不在普通 allowed roots 内——目录里的话就是 catalog 让模型去读的；
+- **寻址到已加载 skill 的写入会被拒绝**，包括经缩短的 catalog 路径：写入先被修复到真实 skill 位置再上报，「改这个 skill」的写入不会变成旁边的杂散目录（`LoadedSkillWriteTarget`，`pkg/tool/loaded_skills.go:319-341`）；
+- 寻址到已加载 skill、且**无法证明只读**的 Shell 命令会被拦下等用户明确批准，理由中点名该 skill；可证明只读的命令保持正常 Shell 策略（`LoadedSkillShellAccessReason`，`pkg/tool/loaded_skills.go:343-354`）。
 
 ### 系统技能的播种
 
@@ -160,7 +161,8 @@ skill 的管理操作（create / update / install / toggle 等，`pkg/skill/serv
 | 主题 | 所在文件 |
 |------|----------|
 | skill 数据模型与 `SKILL.md` 解析 | `pkg/skill/skill.go` |
-| 根路径与优先级、项目信任门禁 | `pkg/skill/roots.go` |
+| 层级表、根路径与优先级、项目信任门禁 | `pkg/skill/roots.go`、`pkg/skill/origin.go` |
+| 共享扫描规则（bundle、点目录、嵌套深度） | `pkg/skill/discover.go` |
 | 发现 / 遍历 / 去重 / 过滤 | `pkg/skill/skillrt.go` |
 | 目录渲染 | `pkg/skill/catalog.go` |
 | 禁用状态存储 | `pkg/skill/state.go` |

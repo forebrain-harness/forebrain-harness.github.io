@@ -2,7 +2,7 @@
 
 本文基于 Forebrain Harness 源码分析，系统阐述 Forebrain Harness memory 的隔离维度、写入机制、读取注入机制、LLM Provider 兼容性，以及一个完整的场景示例。适合需要深入理解 memory 内部行为的开发者阅读。
 
-如果你只需要产品层面的概览，请先阅读 [Memory Systems](/guide/memory-systems)。
+如果你只需要产品层面的概览，请先阅读 [跨会话记忆](/zh/guide/memory-systems)。
 
 ::: tip 双语版本
 [English version](/guide/memory-internals)
@@ -405,7 +405,7 @@ memories:
 
 ## 相关文档
 
-- [Memory Systems](/guide/memory-systems) — 产品层面的 memory 概览
-- [Context and Compaction](/guide/context-and-compaction) — 会话连续性与压缩机制
-- [Memory, Compaction, And Runtime Features](/config/memory-and-runtime-features) — 配置参考
-- [Architecture](/guide/architecture) — 整体架构
+- [跨会话记忆](/zh/guide/memory-systems) — 产品层面的 memory 概览
+- [上下文与压缩](/zh/guide/context-and-compaction) — 会话连续性与压缩机制
+- [Memory、压缩与运行时特性](/zh/config/memory-and-runtime-features) — 配置参考
+- [架构](/zh/guide/architecture) — 整体架构

@@ -1,74 +1,181 @@
+/* Forebrain Harness docs — graphite theme.
+   Source of truth: frontend/src/assets/main.css in the main repository
+   (brand scheme "graphite" plus the shared base palette).
+   Rules: solid colours only — no gradients anywhere; the content area is
+   white and flat; one alt surface; hairline dividers; system sans; code is
+   always the Monokai pair (Monokai Light canvas in light mode). */
+
 :root {
-  --vp-c-brand-1: #0d91b0;
-  --vp-c-brand-2: #19b7d2;
-  --vp-c-brand-3: #6ce6e8;
-  --vp-c-brand-soft: rgba(25, 183, 210, 0.18);
-  --vp-c-bg: #eaf4f5;
-  --vp-c-bg-alt: #dfeff2;
-  --vp-c-bg-elv: #f7fcfc;
-  --vp-c-divider: rgba(20, 74, 94, 0.16);
-  --vp-c-text-1: #102531;
-  --vp-c-text-2: #3d6170;
-  --vp-font-family-base: "Source Serif 4", "Iowan Old Style", "Palatino Linotype", serif;
-  --vp-font-family-mono: "IBM Plex Mono", "SFMono-Regular", monospace;
-  --vp-button-brand-bg: #0d91b0;
-  --vp-button-brand-hover-bg: #0f7f9a;
-  --vp-button-brand-text: #f5ffff;
-  --vp-button-alt-bg: rgba(10, 54, 74, 0.08);
-  --vp-button-alt-hover-bg: rgba(10, 54, 74, 0.14);
-  --vp-home-hero-name-color: transparent;
-  --vp-home-hero-name-background: linear-gradient(120deg, #045c79 0%, #13a9cb 42%, #9df5ee 100%);
-  --vp-home-hero-image-background-image:
-    radial-gradient(circle at 18% 18%, rgba(104, 246, 255, 0.34), transparent 28%),
-    radial-gradient(circle at 78% 18%, rgba(102, 204, 255, 0.26), transparent 30%),
-    radial-gradient(circle at 50% 78%, rgba(43, 123, 163, 0.24), transparent 34%),
-    linear-gradient(145deg, rgba(4, 25, 40, 0.98), rgba(7, 42, 62, 0.96) 58%, rgba(3, 16, 28, 0.98));
-  --vp-home-hero-image-filter: blur(56px);
+  /* Surfaces — light mode is the white content area. */
+  --vp-c-bg: #ffffff;
+  --vp-c-bg-alt: #f7f8fa;
+  --vp-c-bg-elv: #ffffff;
+  --vp-c-bg-soft: #f2f4f7;
+  --vp-c-divider: #e4e7ec;
+  --vp-c-gutter: #e4e7ec;
+  --vp-c-border: #d0d5dd;
+  --vp-c-text-1: #101828;
+  --vp-c-text-2: #475467;
+  --vp-c-text-3: #667085;
+
+  /* Graphite brand (frontend :root[data-brand="graphite"]). */
+  --vp-c-brand-1: #1c1c1f;
+  --vp-c-brand-2: #3a3a40;
+  --vp-c-brand-3: #a1a1aa;
+  --vp-c-brand-soft: #f1f1f2;
+
+  /* Typography — the product's system stacks. */
+  --vp-font-family-base: -apple-system, BlinkMacSystemFont, "PingFang SC",
+    "Hiragino Sans GB", "Segoe UI", "Microsoft YaHei", "Noto Sans SC", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --vp-font-family-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+
+  /* Flat chrome. */
+  --vp-nav-bg-color: #ffffff;
+  --vp-sidebar-bg-color: #f6f6f7; /* graphite rail, light */
+
+  /* Buttons — brand is the graphite ink block; alt is the neutral chip. */
+  --vp-button-brand-border: #1c1c1f;
+  --vp-button-brand-text: #ffffff;
+  --vp-button-brand-bg: #1c1c1f;
+  --vp-button-brand-hover-border: #3a3a40;
+  --vp-button-brand-hover-text: #ffffff;
+  --vp-button-brand-hover-bg: #3a3a40;
+  --vp-button-brand-active-border: #3a3a40;
+  --vp-button-brand-active-text: #ffffff;
+  --vp-button-brand-active-bg: #3a3a40;
+
+  --vp-button-alt-border: #f2f4f7;
+  --vp-button-alt-text: #101828;
+  --vp-button-alt-bg: #f2f4f7;
+  --vp-button-alt-hover-border: #eaecf0;
+  --vp-button-alt-hover-text: #101828;
+  --vp-button-alt-hover-bg: #eaecf0;
+  --vp-button-alt-active-border: #eaecf0;
+  --vp-button-alt-active-text: #101828;
+  --vp-button-alt-active-bg: #eaecf0;
+
+  /* Code — Monokai Light canvas in light mode. */
+  --vp-code-color: #101828;
+  --vp-code-bg: #f2f4f7;
+  --vp-code-block-bg: #fafafa;
+  --vp-code-lang-color: #667085;
+  --vp-code-copy-code-bg: #f2f4f7;
+  --vp-code-copy-code-hover-bg: #eaecf0;
+  --vp-code-copy-code-border-color: #e4e7ec;
+
+  /* Custom blocks — soft, flat, one accent each. */
+  --vp-custom-block-info-bg: #f2f4f7;
+  --vp-custom-block-info-border: #d0d5dd;
+  --vp-custom-block-info-text: #475467;
+  --vp-custom-block-info-code-bg: #eaecf0;
+  --vp-custom-block-tip-bg: #ecfdf3;
+  --vp-custom-block-tip-border: #067647;
+  --vp-custom-block-tip-text: #067647;
+  --vp-custom-block-tip-code-bg: #f2f4f7;
+  --vp-custom-block-warning-bg: #fffaeb;
+  --vp-custom-block-warning-border: #b54708;
+  --vp-custom-block-warning-text: #b54708;
+  --vp-custom-block-warning-code-bg: #f2f4f7;
+  --vp-custom-block-danger-bg: #fef3f2;
+  --vp-custom-block-danger-border: #b42318;
+  --vp-custom-block-danger-text: #b42318;
+  --vp-custom-block-danger-code-bg: #f2f4f7;
+
+  /* Hero — no gradient name, no glow behind the mark. */
+  --vp-home-hero-name-color: var(--vp-c-text-1);
+  --vp-home-hero-image-background-image: none;
+  --vp-home-hero-image-filter: none;
 }
 
+/* Dark mode = the graphite rail's dark palette (#141416 family), including
+   its signature: brand buttons invert to white. */
 .dark {
-  --vp-c-bg: #04111b;
-  --vp-c-bg-alt: #081a26;
-  --vp-c-bg-elv: #0a1f2d;
-  --vp-c-divider: rgba(195, 241, 255, 0.12);
-  --vp-c-text-1: #ebfeff;
-  --vp-c-text-2: #9fc6d4;
-  --vp-button-alt-bg: rgba(128, 236, 255, 0.08);
-  --vp-button-alt-hover-bg: rgba(128, 236, 255, 0.14);
+  --vp-c-bg: #141416;
+  --vp-c-bg-alt: #1c1c1f;
+  --vp-c-bg-elv: #1c1c1f;
+  --vp-c-bg-soft: #1e1e21;
+  --vp-c-divider: #26262a;
+  --vp-c-gutter: #26262a;
+  --vp-c-border: #26262a;
+  --vp-c-text-1: #ededef;
+  --vp-c-text-2: #a1a1a8;
+  --vp-c-text-3: #a1a1a8;
+
+  --vp-c-brand-1: #ededef;
+  --vp-c-brand-2: #ffffff;
+  --vp-c-brand-3: #a1a1a8;
+  --vp-c-brand-soft: #2a2a2e;
+
+  --vp-nav-bg-color: #141416;
+  --vp-sidebar-bg-color: #141416;
+
+  --vp-button-brand-border: #ffffff;
+  --vp-button-brand-text: #141416;
+  --vp-button-brand-bg: #ffffff;
+  --vp-button-brand-hover-border: #e4e4e7;
+  --vp-button-brand-hover-text: #141416;
+  --vp-button-brand-hover-bg: #e4e4e7;
+  --vp-button-brand-active-border: #e4e4e7;
+  --vp-button-brand-active-text: #141416;
+  --vp-button-brand-active-bg: #e4e4e7;
+
+  --vp-button-alt-border: #26262a;
+  --vp-button-alt-text: #ededef;
+  --vp-button-alt-bg: #1e1e21;
+  --vp-button-alt-hover-border: #2a2a2e;
+  --vp-button-alt-hover-text: #ededef;
+  --vp-button-alt-hover-bg: #2a2a2e;
+  --vp-button-alt-active-border: #2a2a2e;
+  --vp-button-alt-active-text: #ededef;
+  --vp-button-alt-active-bg: #2a2a2e;
+
+  /* Inline code on the dark neutral; blocks sit on the Monokai canvas. */
+  --vp-code-color: #ededef;
+  --vp-code-bg: #1c1c1f;
+  --vp-code-block-bg: #272822;
+  --vp-code-lang-color: #a1a1a8;
+  --vp-code-copy-code-bg: #1e1e21;
+  --vp-code-copy-code-hover-bg: #2a2a2e;
+  --vp-code-copy-code-border-color: #26262a;
+
+  /* Status hues step one rung up the same scales the light tokens come from. */
+  --vp-custom-block-info-bg: #1e1e21;
+  --vp-custom-block-info-border: #3a3a40;
+  --vp-custom-block-info-text: #a1a1a8;
+  --vp-custom-block-info-code-bg: #1c1c1f;
+  --vp-custom-block-tip-bg: #1e1e21;
+  --vp-custom-block-tip-border: #47cd89;
+  --vp-custom-block-tip-text: #47cd89;
+  --vp-custom-block-tip-code-bg: #1c1c1f;
+  --vp-custom-block-warning-bg: #1e1e21;
+  --vp-custom-block-warning-border: #fdb022;
+  --vp-custom-block-warning-text: #fdb022;
+  --vp-custom-block-warning-code-bg: #1c1c1f;
+  --vp-custom-block-danger-bg: #1e1e21;
+  --vp-custom-block-danger-border: #f04438;
+  --vp-custom-block-danger-text: #f04438;
+  --vp-custom-block-danger-code-bg: #1c1c1f;
 }
 
-body {
-  background:
-    radial-gradient(circle at top left, rgba(108, 230, 232, 0.18), transparent 20%),
-    radial-gradient(circle at 80% 12%, rgba(69, 165, 214, 0.14), transparent 18%),
-    radial-gradient(circle at bottom right, rgba(11, 85, 117, 0.12), transparent 22%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0)),
-    var(--vp-c-bg);
-}
-
-.VPNavBar {
-  background: rgba(234, 244, 245, 0.78) !important;
-  border-bottom: 1px solid var(--vp-c-divider);
-  backdrop-filter: blur(16px);
-}
-
-.dark .VPNavBar {
-  background: rgba(4, 17, 27, 0.78) !important;
-}
-
+/* Feature cards: one surface, one hairline, no shadow, no gradient. */
 .VPFeature {
   border: 1px solid var(--vp-c-divider);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(240, 249, 250, 0.54)),
-    var(--vp-c-bg-elv);
-  box-shadow: 0 18px 40px rgba(9, 52, 74, 0.08);
+  background: var(--vp-c-bg-elv);
+  box-shadow: none;
+}
+.VPFeature:hover {
+  border-color: var(--vp-c-border);
 }
 
-.dark .VPFeature {
-  background:
-    linear-gradient(180deg, rgba(14, 41, 57, 0.78), rgba(10, 31, 45, 0.62)),
-    var(--vp-c-bg-elv);
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.24);
+/* Prose links: the brand ink needs an underline to stay scannable. */
+.vp-doc a {
+  text-decoration: underline;
+  text-underline-offset: 0.14em;
+  text-decoration-color: var(--vp-c-border);
+}
+.vp-doc a:hover {
+  text-decoration-color: currentColor;
 }
 
 .vp-doc h1,
@@ -79,41 +186,17 @@ body {
   letter-spacing: -0.02em;
 }
 
-.vp-doc .custom-block {
-  border-radius: 14px;
-}
-
-.vp-doc .custom-block.tip {
-  border-color: rgba(13, 145, 176, 0.24);
-  background: rgba(240, 251, 252, 0.92);
-}
-
-.dark .vp-doc .custom-block.tip {
-  background: rgba(7, 36, 50, 0.78);
-}
-
 .vp-doc table {
   display: table;
   width: 100%;
 }
 
-.vp-doc pre {
+/* Code blocks sit on the Monokai canvas inside a hairline frame. */
+.vp-doc div[class*='language-'] {
   border: 1px solid var(--vp-c-divider);
 }
 
-.VPHomeHero .image {
-  filter: drop-shadow(0 22px 40px rgba(6, 78, 104, 0.22));
-}
-
-.VPHomeHero .tagline {
-  max-width: 40rem;
-}
-
-.vp-doc a,
-.VPLink.link {
-  text-underline-offset: 0.14em;
-}
-
+/* Mermaid blocks keep their frame; the diagram theme itself stays neutral. */
 .vp-doc div.language-mermaid {
   overflow-x: auto;
   border: 1px solid var(--vp-c-divider);

@@ -1,134 +1,65 @@
-# Subagents
+# Delegate To Subagents
 
-Forebrain Harness supports delegated execution through subagents.
+Hand bounded work to child agents that run in sessions of their own: your
+main conversation stays readable, several children can work at once, and
+every child run is tracked and reviewable.
 
-Subagents are for doing bounded child work: isolated, role-specific units of
-execution that the main runtime can hand off and track.
+## What Delegation Buys
 
-This page explains them in depth.
+- **Isolated context.** A subagent gets its own session, so a big research
+  sweep or a verification pass never buries your main thread.
+- **Parallel child work.** Several subagents can run at the same time, each
+  with its own status.
+- **Reviewable runs.** Every child run records its identity, parent run,
+  task, status, and output — delegated work is inspectable, not ephemeral.
 
-## Why Forebrain Harness Needs Subagents
+## The Typed Subagents
 
-A serious agent runtime eventually runs into an execution-scale problem:
+Four role types cover most delegation:
 
-- one main agent should not do every side task inline
+- `general-purpose` — an independent implementation or research task.
+- `explore` — read-only investigation and locating facts.
+- `plan` — read-only design and sequencing, no code changes.
+- `verification` — tries to falsify or verify work with concrete checks.
 
-Subagents solve that problem. They let larger work be split into delegated child
-runs instead of crowding a single transcript.
+A fifth style, the fork, starts from the parent's current context and
+continues as a child branch — useful when the child needs strong continuity
+with what the parent already worked out.
 
-## Subagents
+## How To Trigger And Watch Them
 
-Subagents are Forebrain Harness's delegation primitive.
+Just ask. "Run a subagent to find every caller of this function" or "verify
+this fix with a subagent" is enough — the agent delegates through its
+subagent tools and you see the child run start in the transcript.
 
-They let the main runtime hand off work that should be:
+- In the terminal, `/subagents` opens the picker for this chat's subagent
+  sessions, so you can focus a child, send it follow-ups, or pull its
+  findings back into the main thread.
+- In the web UI, the agents page shows live primary and subagent rows with
+  cancellation controls.
+- Subagent history is part of the session record: the TUI, the web UI, and
+  the API all expose it.
 
-- isolated
-- role-specific
-- independently observable
-- resumable or one-shot, depending on subtype
+Approvals apply to children too — a subagent's commands face the same
+sandbox and permission checks as the main agent's
+([Stay In Control](/guide/safety-model)).
 
-## Two Main Subagent Styles
+## When To Reach For One
 
-Forebrain Harness exposes more than one delegated execution style.
+- A bounded task would flood the main conversation: a codebase-wide search,
+  a dependency audit, a test sweep.
+- The work needs a different contract than the main thread: strictly
+  read-only exploration, or adversarial verification.
+- You want the answer, not the detour — delegate, read the result, keep the
+  transcript clean.
 
-### Fresh Typed Subagents
+How coordination modes compose at the runtime level is covered in
+[Agent Collaboration Modes](/guide/agent-collaboration-modes).
 
-Typed subagents are built around predefined role definitions such as:
+## Where Next
 
-- `general-purpose`
-- `explore`
-- `plan`
-- `verification`
-
-These types exist because delegated work often needs clear behavioral contracts.
-
-For example:
-
-- `explore` is read-only
-- `plan` is planning-only
-- `verification` tries to falsify the implementation rather than endorse it
-
-### Forked Subagents
-
-Forked subagents start from cache-safe parent context and continue as a child
-execution branch.
-
-This matters when:
-
-- the child needs stronger continuity with parent prompt state
-- the delegated work should preserve a traceable relation to the parent run
-
-Forked child runs are explicitly marked as a forked runtime kind rather than
-being treated as ordinary main-thread execution.
-
-## Coordinator Mode
-
-Forebrain Harness also includes a coordinator mode for step-based task decomposition.
-
-Coordinator mode turns a larger goal into a plan of bounded steps, then executes
-those steps under structured orchestration.
-
-At a high level, the flow is:
-
-1. generate a JSON plan with steps, dependencies, and optional agent names
-2. obtain approval if required
-3. execute steps in dependency order
-4. substitute completed outputs into downstream step prompts
-5. record success and failure at the step level
-
-This is different from casual delegation because the coordinator is explicitly
-plan-shaped.
-
-## Subagent Identity And History
-
-Forebrain Harness keeps subagent history as a first-class artifact.
-
-Tracked fields include things such as:
-
-- agent identity
-- agent kind
-- parent run
-- child run
-- session
-- task text
-- status
-- output or error
-- runtime kind
-- one-shot vs continuable behavior
-
-This makes subagent work inspectable rather than ephemeral.
-
-## Subagent Lifecycle States
-
-From a product perspective, the important lifecycle states are:
-
-- running
-- ok
-- failed
-- cancelled
-
-That state is useful because delegated work is still operational work. It needs
-to be resumed, audited, or reviewed, not just “generated.”
-
-## Coordination Diagram
-
-```mermaid
-flowchart TB
-    A["Main session"] --> B["Delegate subagent work"]
-    B --> D["Child run with own status"]
-    D --> F["Attempt record"]
-```
-
-## Practical Interpretation
-
-Use subagents when:
-
-- a bounded task should run in a dedicated child context
-- different behavioral contracts are needed for part of the work
-- focused read-only exploration or verification is needed
-
-## Related
-
-- [Architecture](/guide/architecture)
-- [Skills and Tools](/guide/skills-and-tools)
-- [Safety Model](/guide/safety-model)
+- [What You Can Do](/guide/what-you-can-do) — the capability this fits into.
+- [Extend With Skills](/guide/skills-and-tools) — packages of know-how your
+  subagents also load.
+- [Agent Collaboration Modes](/guide/agent-collaboration-modes) — the
+  coordination internals.

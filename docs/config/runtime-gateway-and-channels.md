@@ -55,28 +55,8 @@ It matters for:
 | Field | Type | Default | Usage |
 | --- | --- | --- | --- |
 | `gateway.http_addr` | string | `127.0.0.1:6060` | HTTP listen address for the Forebrain Harness gateway. |
-| `gateway.cors_origins` | string[] | `http://127.0.0.1:5173`, `http://localhost:5173`, `http://127.0.0.1:3000`, `http://localhost:3000` | Browser origins allowed by CORS. |
 | `gateway.auth.mode` | string | `token` | Selects gateway auth mode. |
-| `gateway.auth.token` | string | empty | Token credential for token-based auth. |
-| `gateway.auth.password` | string | empty | Password credential for password-based auth if used. |
-| `gateway.grpc.port` | string | empty | Optional gRPC port for gateway-side runtime services. |
-| `gateway.banner` | boolean | unset unless configured | Enables or disables gateway banner output. |
-| `gateway.banner_text` | string | empty | Custom text shown in the banner. |
-| `gateway.manage_enable` | boolean | unset unless configured | Enables management endpoints when supported by the runtime. |
-| `gateway.enable_response_gzip` | boolean | unset unless configured | Enables gzip compression for responses. |
-| `gateway.log_req_enable` | boolean | unset unless configured | Logs inbound gateway requests. |
-| `gateway.route_root_path` | string | empty | Prefix root for gateway routes. |
-| `gateway.write_timeout` | string | empty | HTTP write timeout duration. |
-| `gateway.read_timeout` | string | empty | HTTP read timeout duration. |
-| `gateway.idle_timeout` | string | empty | HTTP idle timeout duration. |
-| `gateway.grace_timeout` | string | empty | Graceful shutdown timeout. |
-| `gateway.service_name` | string | empty | Service identity label. |
-| `gateway.service_group` | string | empty | Service grouping label. |
-| `gateway.service_version` | string | empty | Service version label. |
-| `gateway.log_level` | string | empty | Gateway log verbosity level. |
-| `gateway.log_path` | string | empty | Output directory for gateway logs. |
-| `gateway.log_caller` | boolean | unset unless configured | Includes caller metadata in logs. |
-| `gateway.log_discard` | boolean | unset unless configured | Discards gateway logs entirely. |
+| `gateway.auth.token` | string | empty | Token credential for token-based auth. Reference it as `${ENV_NAME}`; plaintext secrets are rejected at startup. |
 
 ### How To Use The Gateway Block
 
@@ -87,25 +67,27 @@ Use it when:
 - you need Forebrain Harness reachable by a browser, web client, or external caller
 - you want to bind to a non-default interface or port
 
-`gateway.cors_origins` matters when:
-
-- you are serving the docs, UI, or a local web app from a different origin
-- browser requests fail because of CORS
-
 `gateway.auth.*` matters when:
 
 - exposing Forebrain Harness beyond a strictly local environment
 - integrating with a web client that must authenticate
 
-The timeout fields matter when:
+### Startup Output
 
-- you are proxying long-running requests
-- large responses or slow clients cause connection churn
+`forebrain gateway start` prints a startup banner once the socket is open:
 
-The service identity and logging fields matter when:
-
-- you run Forebrain Harness as part of a larger platform
-- you need clearer service metadata in logs or observability pipelines
+- the Forebrain Harness wordmark and this build's version;
+- `Routes (N)` — every HTTP route this instance answers for, plus the
+  `WS /ws/chat` websocket endpoint;
+- `Channel routes · <agent> (M)` — the inbound endpoints mounted by the
+  active primary agent's channels (omitted when none are bound);
+- `Web UI` — the address the embedded web UI is served at;
+- `Sign in` — a one-click sign-in URL that carries the gateway token. It is
+  printed only when stdout is a terminal a person is reading, so the token
+  never lands in a captured log file;
+- `Auth` — the configured auth mode;
+- `Listening on` — the address actually bound. When the gateway binds an
+  unspecified address (`0.0.0.0`), the clickable URLs above use `127.0.0.1`.
 
 ## Messaging And Integration Channels
 

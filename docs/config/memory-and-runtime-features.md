@@ -5,8 +5,7 @@ session-behavior features without explaining the underlying behavior in depth.
 
 Use this page for:
 
-- Active Memory configuration
-- Core Memory and dreaming flags
+- memory generation, retrieval, and background-pipeline tuning
 - automatic compaction
 
 ## `compact`
@@ -25,111 +24,54 @@ It runs before a turn and again between model samples when the threshold is
 reached. The model's full context window remains a hard limit under both token
 scopes. `/compact` invokes the same replacement-history pipeline manually.
 
-## `memory`
+## `memories`
 
-The top-level `memory` block covers Active Memory and Core Memory.
-
-It is separate from `agents.defaults.memory_*`, which controls memory-related
-runtime policy such as search and governance.
-
-### `memory.active`
-
-`memory.active` configures Active Memory as a product feature.
+The top-level `memories` block configures memory generation, retrieval, and
+the pacing of the background pipeline that distills sessions into durable
+notes. Memory features are on by default; each switch below turns one
+concern off without touching the others.
 
 | Field | Type | Default | Usage |
 | --- | --- | --- | --- |
-| `memory.active.enabled` | boolean | effective `true` when omitted | Entry-level switch for Active Memory. |
-| `memory.active.config.enabled` | boolean | effective `true` when omitted | Nested runtime switch for Active Memory behavior. |
-| `memory.active.config.agents` | string[] | effective `["main"]` | Agent IDs allowed to use Active Memory. |
-| `memory.active.config.model` | string | empty | Preferred model for Active Memory runs. |
-| `memory.active.config.model_fallback` | string | empty | Fallback model for Active Memory runs. |
-| `memory.active.config.allowed_chat_types` | string[] | effective `["direct"]` | Allowed chat types for Active Memory use. |
-| `memory.active.config.thinking` | string | empty | Reserved label field; parsed but not currently consumed by runtime decision logic. |
-| `memory.active.config.query_mode` | string | `recent` | Controls how much recent conversation is included in the recall query. |
-| `memory.active.config.prompt_style` | string | inferred from `query_mode`; usually `balanced` | Shapes the recall prompt style. |
-| `memory.active.config.prompt_override` | string | empty | Full prompt override. |
-| `memory.active.config.prompt_append` | string | empty | Suffix appended to the generated prompt. |
-| `memory.active.config.timeout_ms` | integer | `15000` | Active Memory timeout in milliseconds. |
-| `memory.active.config.max_summary_chars` | integer | `220` | Maximum summary size returned by Active Memory. |
-| `memory.active.config.recent_user_turns` | integer | `2` | Recent user-turn window. |
-| `memory.active.config.recent_assistant_turns` | integer | `1` | Recent assistant-turn window. |
-| `memory.active.config.recent_user_chars` | integer | `220` | Recent user-character budget. |
-| `memory.active.config.recent_assistant_chars` | integer | `180` | Recent assistant-character budget. |
-| `memory.active.config.logging` | boolean | `false` | Enables Active Memory status logging. |
-| `memory.active.config.cache_ttl_ms` | integer | `15000` | Cache TTL for Active Memory results. |
-| `memory.active.config.persist_transcripts` | boolean | `false` | Persists transcripts used by Active Memory processing. |
-| `memory.active.config.transcript_dir` | string | `active-memory` | Directory name for persisted Active Memory transcripts. |
+| `memories.generate_memories` | boolean | `true` | Generates memories from eligible completed turns. `false` leaves only explicit memory-tool use. |
+| `memories.use_memories` | boolean | `true` | Injects distilled memory into sessions through the read path. |
+| `memories.dedicated_tools` | boolean | `true` | Registers the dedicated memory tools (`memories_list`, `memories_read`, `memories_search`, `memories_add_ad_hoc_note`). |
+| `memories.disable_on_external_context` | boolean | `false` | Skips memory generation for sessions whose transcript may contain externally injected context. |
+| `memories.search_top_k` | integer | `5`, clamped to 1–20 | Memories returned by one `memories_search` call. This is a budget on the model's context, not a page size — there is no second page; values above the ceiling are clamped, not refused. |
+| `memories.extract_model` | string | empty | Model override for the extraction stage. Empty means no override. |
+| `memories.consolidation_model` | string | empty | Model override for the consolidation stage. Empty means no override. |
+| `memories.max_raw_memories_for_consolidation` | integer | `256`, clamped to 1–4096 | Raw memories consumed per consolidation batch. |
+| `memories.max_unused_days` | integer | `30`, clamped to 0–365 | Days an unused raw memory is kept before pruning. |
+| `memories.max_rollout_age_days` | integer | `10`, clamped to 0–90 | Maximum age of a rollout the startup pass will claim. |
+| `memories.min_rollout_idle_hours` | integer | `6`, clamped to 1–48 | A rollout must be idle this long before the startup pass claims it. |
+| `memories.max_rollouts_per_startup` | integer | `2`, clamped to 1–128 | Rollouts claimed per startup pass — the pacing knob for background generation. |
+| `memories.min_rate_limit_remaining_percent` | integer | `25`, clamped to 0–100 | Skips a generation pass when the provider rate-limit balance is below this percentage. |
 
-#### How To Use Active Memory Settings
+#### How To Use Memory Settings
 
-Use `agents` when:
+Use `generate_memories: false` when:
 
-- only some named agents should be allowed to perform recall
+- you want memories written only when a tool call explicitly asks for it
 
-Use `model` and `model_fallback` when:
+Use `extract_model` and `consolidation_model` when:
 
-- you want Active Memory to use a different model from the main response model
-- you want a cheaper or more stable fallback path
+- you want background memory work to run on a different model from the main
+  response model — for example a cheaper or more stable one
 
-Use `query_mode` when:
+Use the rollout knobs (`max_rollout_age_days`, `min_rollout_idle_hours`,
+`max_rollouts_per_startup`) when:
 
-- you want tighter or broader recall context
+- you want to slow down or speed up how much background generation happens
+  after each startup
 
-Accepted `query_mode` values:
+Use `min_rate_limit_remaining_percent` when:
 
-- `recent`
-- `message`
-- `full`
+- memory generation should yield to your main usage as the provider rate
+  limit runs down
 
-Use `prompt_style` when:
+Use `search_top_k` when:
 
-- recall needs to be stricter, more contextual, or more preference-oriented
-
-Accepted prompt styles:
-
-- `balanced`
-- `strict`
-- `contextual`
-- `recall-heavy`
-- `precision-heavy`
-- `preference-only`
-
-Use `prompt_override` only when:
-
-- you need full control over recall prompting
-- you are willing to own the resulting behavior
-
-Use the recent-turn and recent-char windows when:
-
-- Active Memory is pulling too little or too much short-term context into recall
-
-Use `persist_transcripts` when:
-
-- you need reproducibility or inspection for Active Memory behavior
-
-### `memory.core`
-
-`memory.core` is the top-level Core Memory block.
-
-| Field | Type | Default | Usage |
-| --- | --- | --- | --- |
-| `memory.core.enabled` | boolean | effective `true` when the entry exists and the flag is omitted | Enables the Core Memory entry. |
-
-### `memory.core.config.dreaming`
-
-Dreaming flags are documented here as configuration because they are part of
-the public config surface.
-
-| Field | Type | Default | Usage |
-| --- | --- | --- | --- |
-| `memory.core.config.dreaming.enabled` | boolean | effective `false` | Enables dreaming status for Core Memory. |
-| `memory.core.config.dreaming.frequency` | string | effective `manual` | Labels the intended dreaming cadence. |
-
-Important note:
-
-- the dreaming flags mirror documented memory-core state
-- consolidation work is surfaced through memory tooling and governance flows
-- if `frequency` is omitted, the status surface reports `manual`
+- recall is pulling too much context into each turn, or too little
 
 ## Related
 
