@@ -56,7 +56,8 @@ agents:
 | --- | --- | --- | --- |
 | `agents.definitions.<name>.primary` | boolean | `false`, except `main` is always primary | Marks a user-defined agent as a primary workspace. Ignored for `main` and built-in subagent types. |
 | `agents.definitions.<name>.max_iterations` | integer | `90` if omitted or invalid | Maximum iterations for the agent run loop. |
-| `agents.definitions.<name>.llm_providers` | object[] | at least one empty entry for `main` | Provider chain used by the agent. |
+| `agents.definitions.<name>.llm_providers` | object[] | at least one empty entry for `main` | The model services this agent may use (no order semantics — the row order is pure storage and no operation changes it). |
+| `agents.definitions.<name>.default_model` | string | empty = the first entry | The agent's default model, as `provider/model` (a model id may itself contain `/`; the first `/` splits the pair). It must name an entry on this agent's list; a dangling value is refused by both load and save. |
 | `agents.definitions.<name>.loop_guard` | object | disabled unless configured | Loop-guard behavior for the agent. |
 | `agents.definitions.<name>.heartbeat` | object | inherited from `agents.defaults.heartbeat` | Per-agent heartbeat override. |
 
@@ -333,6 +334,7 @@ The input, output, and retrieval rails are always on and cannot be disabled. Onl
 | `tavily.search_depth` | string | `basic` unless explicitly `advanced` | Tavily search depth. |
 | `brave.api_key` | string | empty | Brave Search API key. |
 | `baidu.api_key` | string | empty | Baidu web search API key. |
+| `deepseek.api_key` | string | empty | DeepSeek API key. DEEPSEEK_API_KEY in the environment fills this and web_fetch.deepseek.api_key. |
 
 Accepted provider values:
 
@@ -340,6 +342,15 @@ Accepted provider values:
 - `tavily`
 - `brave`
 - `baidu`
+- `deepseek`
+
+## `agents.defaults.web_fetch`
+
+| Field | Type | Default | Usage |
+| --- | --- | --- | --- |
+| `provider` | string | empty, the built-in direct HTTP fetcher | `deepseek` routes fetches through DeepSeek's Fetch API (server-side rendering to Markdown). Never auto-selected. |
+| `deepseek.api_key` | string | empty | DeepSeek API key, filled from `DEEPSEEK_API_KEY` in the environment. |
+| `allow_private_ip` | boolean | `false` | Lets the built-in fetcher reach loopback and RFC1918 hosts. A routed provider (`provider: deepseek`) cannot reach them and refuses such targets. |
 
 ## `agents.defaults.sourcegraph`
 
@@ -348,6 +359,32 @@ Accepted provider values:
 | `enabled` | boolean | effective `true` when omitted | Enables Sourcegraph-backed features. |
 | `graphql_endpoint` | string | empty | GraphQL endpoint. |
 | `token` | string | empty | Sourcegraph token. |
+
+## `agents.defaults.network_retry_max` and `agents.defaults.stream_idle_timeout_seconds`
+
+These two keys decide what happens when a model request stops making progress. Both
+belong to `agents.defaults`.
+
+| Field | Type | Default | Usage |
+| --- | --- | --- | --- |
+| `network_retry_max` | integer | `10` | How many times a failed model request is re-sent. `0` turns network retries off; negative values are refused at load; anything above `15` runs at `15`. |
+| `stream_idle_timeout_seconds` | integer | `300` | How long a streaming request may stay silent — no response headers, or no new data — before it is treated as a dropped connection. `0` turns the watchdog off; negative values are refused at load; other values are clamped to between `10` and `1800` seconds. |
+
+A retry **re-sends the whole request**; it does not resume the interrupted stream. An
+answer that was already complete is kept rather than repeated, and a request whose tools
+already ran is never sent again — the state file the run keeps is what makes both true.
+
+Lower `stream_idle_timeout_seconds` if a stuck turn should end faster. Do not go far
+below the default for reasoning models: a model that thinks for a long time sends nothing
+while it does, and a window shorter than its thinking time will cut it off and resend the
+request.
+
+```yaml
+agents:
+  defaults:
+    network_retry_max: 5
+    stream_idle_timeout_seconds: 120
+```
 
 ## Related
 

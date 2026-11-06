@@ -75,6 +75,8 @@ Use `PostToolUse` when:
 
 - you want summarization, logging, or follow-up actions after successful tool calls
 
+For the `shell` tool, `tool_response` is the result object (`stdout`, `stderr`, `exit_code`, …); when the command changed files in a git work tree it also carries `shell_edit_diff`, whose `changed_files` lists up to 200 absolute paths.
+
 Use `PostToolUseFailure` when:
 
 - failed tool calls should trigger remediation, review, or incident-style handling

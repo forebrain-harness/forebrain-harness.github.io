@@ -54,7 +54,8 @@ agents:
 | --- | --- | --- | --- |
 | `agents.definitions.<name>.primary` | boolean | `false`，但 `main` 永远是 primary | 把一个用户定义的 agent 标记为主工作区。对 `main` 和内置 subagent 类型无效。 |
 | `agents.definitions.<name>.max_iterations` | integer | 省略或非法时为 `90` | Agent run 循环的最大迭代次数。 |
-| `agents.definitions.<name>.llm_providers` | object[] | `main` 至少一个空条目 | Agent 使用的 provider 链。 |
+| `agents.definitions.<name>.llm_providers` | object[] | `main` 至少一个空条目 | Agent 可用的模型服务列表（无顺序语义，行序只是存储顺序，任何操作都不会改变它）。 |
+| `agents.definitions.<name>.default_model` | string | 空 = 第一项 | 默认模型，格式 `provider/model`（model id 自身可含 `/`，按第一个 `/` 拆分）。必须指向本 agent 列表中的某一项；悬空的值在加载与保存时都会被拒绝。 |
 | `agents.definitions.<name>.loop_guard` | object | 未配置即禁用 | Agent 的 loop-guard 行为。 |
 | `agents.definitions.<name>.heartbeat` | object | 继承 `agents.defaults.heartbeat` | 按 agent 覆盖 heartbeat。 |
 
@@ -328,6 +329,7 @@ agents:
 | `tavily.search_depth` | string | 非 `advanced` 即 `basic` | Tavily 搜索深度。 |
 | `brave.api_key` | string | 空 | Brave Search API key。 |
 | `baidu.api_key` | string | 空 | Baidu web 搜索 API key。 |
+| `deepseek.api_key` | string | 空 | DeepSeek API key。环境变量 DEEPSEEK_API_KEY 会同时填入本字段与 web_fetch.deepseek.api_key。 |
 
 可接受的 provider 取值：
 
@@ -335,6 +337,15 @@ agents:
 - `tavily`
 - `brave`
 - `baidu`
+- `deepseek`
+
+## `agents.defaults.web_fetch`
+
+| 字段 | 类型 | 默认 | 用途 |
+| --- | --- | --- | --- |
+| `provider` | string | 空，内置直连 HTTP 抓取器 | 显式设为 `deepseek` 才把抓取路由到 DeepSeek Fetch API（服务端渲染为 Markdown）。永不自动选择。 |
+| `deepseek.api_key` | string | 空 | DeepSeek API key，由环境变量 DEEPSEEK_API_KEY 填入。 |
+| `allow_private_ip` | boolean | `false` | 允许内置抓取器访问回环与 RFC1918 主机。路由到第三方 provider（`provider: deepseek`）时够不到这些地址，这类目标会被拒绝。 |
 
 ## `agents.defaults.sourcegraph`
 
@@ -343,6 +354,28 @@ agents:
 | `enabled` | boolean | 省略时实际为 `true` | 启用 Sourcegraph 支撑的特性。 |
 | `graphql_endpoint` | string | 空 | GraphQL 端点。 |
 | `token` | string | 空 | Sourcegraph token。 |
+
+## `agents.defaults.network_retry_max` 与 `agents.defaults.stream_idle_timeout_seconds`
+
+这两个键决定"模型请求不再前进时会发生什么"，都属于 `agents.defaults`。
+
+| 字段 | 类型 | 默认 | 用途 |
+| --- | --- | --- | --- |
+| `network_retry_max` | integer | `10` | 失败模型请求的重发次数。`0` 关闭网络重试；负数在加载时被拒；大于 `15` 按 `15` 运行。 |
+| `stream_idle_timeout_seconds` | integer | `300` | 流式请求可以静默多久——没有响应头，或没有新数据——之后被视为掉线。`0` 关闭看门狗；负数在加载时被拒；其它值被限制在 `10` 到 `1800` 秒之间。 |
+
+重试是**整请求重发**，不会接着被打断的那段流往下写。已经完整到达的回答会被保留而不是重说一遍，
+已经跑过工具调用的请求也不会再发一次——运行中落盘的状态让这两件事都成立。
+
+想让卡住的回合更快结束就调小 `stream_idle_timeout_seconds`；但对思考型模型不要远低于默认值：
+模型思考期间不会发送任何数据，窗口短于它的思考时间就会把它掐断并重发请求。
+
+```yaml
+agents:
+  defaults:
+    network_retry_max: 5
+    stream_idle_timeout_seconds: 120
+```
 
 ## 相关页面
 

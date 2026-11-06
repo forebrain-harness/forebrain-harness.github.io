@@ -18,9 +18,9 @@ Forebrain Harness 以单个自包含二进制分发。Vue 前端在构建时经 
 ### 内嵌如何工作
 
 - 前端在 `frontend/`，用 Vite 构建。
-- 构建产物**直接写进 Go embed 包** `internal/webui/dist`（Vite 的
+- 构建产物**直接写进 Go embed 包** `pkg/gateway/dist`（Vite 的
   `outDir`）。
-- `internal/webui/embed.go` 内嵌该目录：
+- `pkg/gateway/http_server.go` 内嵌该目录：
 
   ```go
   //go:embed all:dist
@@ -29,9 +29,9 @@ Forebrain Harness 以单个自包含二进制分发。Vue 前端在构建时经 
   func FS() (fs.FS, bool) { /* returns the dist subtree + whether it is built */ }
   ```
 
-- 启动时 gateway 调用 `webui.FS()`，服务内嵌的文件。
+- 启动时 gateway 调用 `gateway.FS()`，服务内嵌的文件。
 
-一个已提交的占位文件 `internal/webui/dist/.gitkeep` 保证 `go build` 总能
+一个已提交的占位文件 `pkg/gateway/dist/.gitkeep` 保证 `go build` 总能
 编译，即使在尚未构建前端的干净 checkout 上。这种状态下二进制只是不提供
 UI（与旧的"没有静态目录"行为一致），直到前端构建跑过。
 
@@ -62,12 +62,12 @@ UI（与旧的"没有静态目录"行为一致），直到前端构建跑过。
 
 | 目标 | 做什么 |
 | --- | --- |
-| `make ui` | 把前端构建进 Go embed 包（`internal/webui/dist`）。 |
+| `make ui` | 把前端构建进 Go embed 包（`pkg/gateway/dist`）。 |
 | `make build` | 先跑 `ui`，再把自包含二进制编译到 `build/bin/forebrain`。 |
 | `make test` | 运行 Go 测试套件。 |
 | `make docker` | 构建容器镜像。 |
 | `make release` | 构建按平台的 npm 包，每个都内嵌前端。 |
-| `make clean` | 移除构建产物和生成的前端资产（保留 `.gitkeep`）。 |
+| `make clean` | 移除构建产物（`build/bin`）；被 gitignore 的 UI 产物留着。 |
 
 常见用法：
 
@@ -89,12 +89,12 @@ make build
 # 1. 把前端构建进 embed 包
 cd frontend
 corepack pnpm install            # 仅首次 checkout 需要
-corepack pnpm build              # 输出到 ../internal/webui/dist
+corepack pnpm build              # 输出到 ../pkg/gateway/dist
 cd ..
 
 # 2. 构建内嵌 UI 的二进制
 CGO_ENABLED=1 go build -tags fts5 -trimpath \
-  -ldflags "-s -w -X github.com/forebrain-harness/forebrain-harness/internal/buildinfo.Version=$(cat VERSION)" \
+  -ldflags "-s -w -X github.com/forebrain-harness/forebrain-harness/pkg/home.Version=v$(cat VERSION)" \
   -o build/bin/forebrain ./cmd/forebrain
 ```
 
@@ -121,7 +121,7 @@ docker build -t forebrain:$(cat VERSION) .
 Dockerfile 是多阶段构建：
 
 1. **frontend 阶段**（`node:22`）——安装依赖并跑 Vite 构建，写到
-   `internal/webui/dist`。
+   `pkg/gateway/dist`。
 2. **gobuild 阶段**（`golang:1.26`）——在 `go build` **之前**拷入构建好的
    前端，编译内嵌 UI 的二进制。
 3. **final 阶段**（`debian:bookworm-slim`）——只拷贝二进制。暴露 `6060`，
@@ -151,6 +151,7 @@ FOREBRAIN_VERSION=$(cat VERSION) npm/scripts/build-platform-packages.sh
 | --- | --- | --- |
 | `FOREBRAIN_VERSION` | `0.1.0` | 包与二进制版本。 |
 | `FOREBRAIN_BUILD_TARGETS` | 宿主 triple | 空格分隔的目标，如 `"darwin/arm64 linux/amd64"`。 |
+| `FOREBRAIN_SKIP_UI_BUILD` | 未设置 | 设为 `1` 跳过前端重建，直接内嵌现有 `pkg/gateway/dist`（发版流水线如此使用）。 |
 
 交叉编译要求 `CGO_ENABLED=1` 和每个目标匹配的 C 工具链；脚本默认只构建
 宿主 triple，本地开发不需要交叉工具链。
@@ -161,7 +162,7 @@ FOREBRAIN_VERSION=$(cat VERSION) npm/scripts/build-platform-packages.sh
 
 ```bash
 # embedded assets are present
-ls internal/webui/dist        # index.html + assets/
+ls pkg/gateway/dist           # index.html + assets/
 
 # run and check serving
 ./build/bin/forebrain gateway start &
@@ -182,7 +183,7 @@ FOREBRAIN_STATIC_DIST=/path/to/dist ./build/bin/forebrain gateway start
 - **`.gitkeep` 必须保持已提交。** 它让 `go build` 在任何前端构建之前都能
   工作。Vite 配置用 `emptyOutDir: false` 正是为了让占位文件在构建后存活；
   Makefile 改为显式清理过期资产。
-- **内嵌资产被 gitignore。** `internal/webui/dist` 下只有 `.gitkeep`
+- **内嵌资产被 gitignore。** `pkg/gateway/dist` 下只有 `.gitkeep`
   占位被跟踪；构建出的 `index.html` 和 `assets/` 由流水线重新生成，
   从不提交。
 - **前端 lockfile。** 如果 `pnpm install --frozen-lockfile` 因 `overrides`

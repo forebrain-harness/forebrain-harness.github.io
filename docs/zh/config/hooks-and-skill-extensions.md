@@ -75,6 +75,8 @@ Matcher 可以是：
 
 - 你想在成功的工具调用之后做摘要、记录或后续动作
 
+`shell` 工具的 `tool_response` 是结果对象（`stdout`、`stderr`、`exit_code` 等）；命令在 git 工作树里改了文件时还带 `shell_edit_diff`，其中 `changed_files` 列出至多 200 个绝对路径。
+
 以下情况使用 `PostToolUseFailure`：
 
 - 失败的工具调用应触发补救、复查或事故式处理
